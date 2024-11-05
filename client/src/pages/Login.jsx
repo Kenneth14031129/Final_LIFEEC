@@ -1,9 +1,8 @@
-// eslint-disable-next-line no-unused-vars
+import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa6";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import AuthService from "../services/authService";
 import "react-toastify/dist/ReactToastify.css";
 import GoogleSvg from "../assets/icons8-google.svg";
 import Logo from "../assets/logo.jpg";
@@ -14,7 +13,10 @@ const Login = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (AuthService.isAuthenticated()) {
+    const token = JSON.parse(localStorage.getItem("auth")) || "";
+    const userId = JSON.parse(localStorage.getItem("userId")) || "";
+
+    if (token && userId) {
       toast.success("You are already logged in", {
         position: "top-right",
         autoClose: 3000,
@@ -29,10 +31,18 @@ const Login = () => {
     const password = e.target.password.value;
 
     if (email && password) {
+      const formData = { email, password };
       try {
-        const { user } = await AuthService.login(email, password);
+        const response = await axios.post(
+          "http://localhost:3000/api/v1/auth/login",
+          formData
+        );
 
+        const { token, user } = response.data;
         if (user.userType === "Admin" || user.userType === "Owner") {
+          // Save token and user ID to localStorage
+          localStorage.setItem("auth", JSON.stringify(token));
+          localStorage.setItem("userId", JSON.stringify(user._id));
           toast.success("Login successful", {
             position: "top-right",
             autoClose: 3000,
@@ -43,11 +53,10 @@ const Login = () => {
             position: "top-right",
             autoClose: 3000,
           });
-          AuthService.logout();
         }
       } catch (err) {
         console.error(err);
-        toast.error(err.message, {
+        toast.error("Login failed. Please check your credentials.", {
           position: "top-right",
           autoClose: 3000,
         });
